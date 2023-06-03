@@ -44,6 +44,7 @@ class CreateTask(StatesGroup):
     set_to_do_date = State()
     set_to_do_time = State()
     save_to_do = State()
+    time_widget = State()
 
 
 tags = [
@@ -105,6 +106,13 @@ async def on_time_selected(callback: CallbackQuery, widget: Any, manager: Dialog
     await manager.switch_to(CreateTask.start_create_task)
 
 
+async def date_save(c: CallbackQuery, button: Button, manager: DialogManager):
+    manager.current_context().dialog_data["time"] = f'{manager.current_context().dialog_data["hour_value"]}:' \
+                                                    f'{manager.current_context().dialog_data["minutes_value"]}'
+
+    await manager.switch_to(CreateTask.start_create_task)
+
+
 ID_SCROLL_NO_PAGER = "scroll_no_pager"
 
 
@@ -122,6 +130,36 @@ async def button_time_getter(**kwargs):
     }
 
 
+async def getter_widget_time(dialog_manager: DialogManager, **kwargs):
+    if "hour_value" not in dialog_manager.current_context().dialog_data:
+        dialog_manager.current_context().dialog_data["hour_value"] = str(12)
+    if "minutes_value" not in dialog_manager.current_context().dialog_data:
+        dialog_manager.current_context().dialog_data["minutes_value"] = str(30)
+    return {}
+
+
+async def widget_hours(c: CallbackQuery, button: Button, manager: DialogManager):
+    action, amount = button.widget_id.split("widget_hours_")[1].split("_")
+    if action == "plus":
+        if int(manager.current_context().dialog_data["hour_value"]) + int(amount) <= 23:
+            print(manager.current_context().dialog_data["hour_value"])
+            manager.current_context().dialog_data["hour_value"] = str(int(manager.current_context().dialog_data["hour_value"]) + int(amount))
+    else:
+        if int(manager.current_context().dialog_data["hour_value"]) - int(amount) >= 0:
+            manager.current_context().dialog_data["hour_value"] = str(int(manager.current_context().dialog_data["hour_value"]) - int(amount))
+
+
+async def widget_minutes(c: CallbackQuery, button: Button, manager: DialogManager):
+    action, amount = button.widget_id.split("widget_minutes_")[1].split("_")
+    if action == "plus":
+        if int(manager.current_context().dialog_data["minutes_value"]) + int(amount) <= 59:
+            print(manager.current_context().dialog_data["minutes_value"])
+            manager.current_context().dialog_data["minutes_value"] = str(int(manager.current_context().dialog_data["minutes_value"]) + int(amount))
+    else:
+        if int(manager.current_context().dialog_data["minutes_value"]) - int(amount) >= 0:
+            manager.current_context().dialog_data["minutes_value"] = str(int(manager.current_context().dialog_data["minutes_value"]) - int(amount))
+
+
 create_task_dialog = Dialog(
     Window(
         Const("Выберете поля, которые вы хотите заполнить"),
@@ -132,7 +170,7 @@ create_task_dialog = Dialog(
                      state=CreateTask.set_to_do_date),
             SwitchTo(Const("Тэги"), id="start_create_task_set_tags", state=CreateTask.set_tags),
             SwitchTo(Const("Сохранить"), id="start_create_task_save", state=CreateTask.save_to_do),
-
+            # SwitchTo(Const("Виджет"), id="start_create_task_time_widget", state=CreateTask.time_widget),
             width=2
         ),
         state=CreateTask.start_create_task,
@@ -241,7 +279,8 @@ create_task_dialog = Dialog(
         ),
         SwitchTo(Const("Назад"), id="set_to_do_time_back", state=CreateTask.start_create_task),
         getter=button_time_getter,
-        state=CreateTask.set_to_do_time),
+        state=CreateTask.time_widget
+    ),
     Window(
         Format("Название: {dialog_data[name]}", F["dialog_data"].func(lambda dialog_data: "name" in dialog_data)),
         Format("Название: не введено", F["dialog_data"].func(lambda dialog_data: "name" not in dialog_data)),
@@ -258,5 +297,48 @@ create_task_dialog = Dialog(
             width=2
         ),
         state=CreateTask.save_to_do,
+    ),
+    Window(
+        Format("Вы выбрали {dialog_data[date]}\n"
+               "Теперь выберете время:"),
+        Group(
+            Button(Const("   +3h   "), id="time_widget_hours_plus_3", on_click=widget_hours),
+
+            Button(Const("   +h   "), id="time_widget_hours_plus_1", on_click=widget_hours),
+            Button(Const("       "), id="time_widget_space", on_click=widget_hours),
+
+            Button(Const("   +m   "), id="time_widget_minutes_plus_1", on_click=widget_minutes),
+            Button(Const("   +5m   "), id="time_widget_minutes_plus_5", on_click=widget_minutes),
+            width=5
+        ),
+        Group(
+            # Button(Const("▲"), id="time_widget_hours_plus", on_click=widget_hours),
+            # Button(Const(" "), id="time_widget_space"),
+            # Button(Const("▲"), id="time_widget_minutes_plus", on_click=widget_minutes),
+            Button(Format("{dialog_data[hour_value]} hour"), id="time_widget"),
+            Button(Const("::"), id="time_widget_space"),
+            Button(Format("{dialog_data[minutes_value]} min"), id="time_widget"),
+            # Button(Const("▼"), id="time_widget_hours_minus", on_click=widget_hours),
+            # Button(Const(" "), id="time_widget_space"),
+            # Button(Const("▼"), id="time_widget_minutes_minus", on_click=widget_minutes),
+            width=3
+        ),
+        Group(
+            Button(Const("-3h"), id="time_widget_hours_minus_3", on_click=widget_hours),
+
+            Button(Const("-h"), id="time_widget_hours_minus_1", on_click=widget_hours),
+            Button(Const(" "), id="time_widget_space", on_click=widget_hours),
+
+            Button(Const("-m"), id="time_widget_minutes_minus_1", on_click=widget_minutes),
+            Button(Const("-5m"), id="time_widget_minutes_minus_5", on_click=widget_minutes),
+            width=5
+        ),
+        Group(
+            SwitchTo(Const("Назад"), id="time_widget_back", state=CreateTask.start_create_task),
+            Button(Const("Сохранить"), id="set_to_do_time_save_to_do_date", on_click=date_save),
+            width=2
+        ),
+        getter=getter_widget_time,
+        state=CreateTask.set_to_do_time,
     ),
 )

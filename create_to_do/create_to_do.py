@@ -149,10 +149,12 @@ async def widget_hours(c: CallbackQuery, button: Button, manager: DialogManager)
     if action == "plus":
         if int(manager.current_context().dialog_data["hour_value"]) + int(amount) <= 23:
             print(manager.current_context().dialog_data["hour_value"])
-            manager.current_context().dialog_data["hour_value"] = str(int(manager.current_context().dialog_data["hour_value"]) + int(amount))
+            manager.current_context().dialog_data["hour_value"] = str(
+                int(manager.current_context().dialog_data["hour_value"]) + int(amount))
     else:
         if int(manager.current_context().dialog_data["hour_value"]) - int(amount) >= 0:
-            manager.current_context().dialog_data["hour_value"] = str(int(manager.current_context().dialog_data["hour_value"]) - int(amount))
+            manager.current_context().dialog_data["hour_value"] = str(
+                int(manager.current_context().dialog_data["hour_value"]) - int(amount))
 
 
 async def widget_minutes(c: CallbackQuery, button: Button, manager: DialogManager):
@@ -160,10 +162,12 @@ async def widget_minutes(c: CallbackQuery, button: Button, manager: DialogManage
     if action == "plus":
         if int(manager.current_context().dialog_data["minutes_value"]) + int(amount) <= 59:
             print(manager.current_context().dialog_data["minutes_value"])
-            manager.current_context().dialog_data["minutes_value"] = str(int(manager.current_context().dialog_data["minutes_value"]) + int(amount))
+            manager.current_context().dialog_data["minutes_value"] = str(
+                int(manager.current_context().dialog_data["minutes_value"]) + int(amount))
     else:
         if int(manager.current_context().dialog_data["minutes_value"]) - int(amount) >= 0:
-            manager.current_context().dialog_data["minutes_value"] = str(int(manager.current_context().dialog_data["minutes_value"]) - int(amount))
+            manager.current_context().dialog_data["minutes_value"] = str(
+                int(manager.current_context().dialog_data["minutes_value"]) - int(amount))
 
 
 async def getter_notification(dialog_manager: DialogManager, **kwargs):
@@ -186,6 +190,10 @@ async def get_widget_notification_data(notification_type: str):
         split_str = "widget_not_minutes_"
         upper_limit = 59
         lower_limit = 0
+    elif notification_type == "d":
+        split_str = "widget_not_days_"
+        upper_limit = 6
+        lower_limit = 0
     return split_str, upper_limit, lower_limit
 
 
@@ -193,23 +201,27 @@ async def widget_notification_hours(c: CallbackQuery, button: Button, manager: D
     split_str, upper_limit, lower_limit = await \
         get_widget_notification_data(manager.current_context().dialog_data["notification_type"])
     action, amount = button.widget_id.split(split_str)[1].split("_")
+
     if action == "plus":
         if int(manager.current_context().dialog_data["notification_value"]) + int(amount) <= upper_limit:
-            manager.current_context().dialog_data["notification_value"] =\
+            manager.current_context().dialog_data["notification_value"] = \
                 str(int(manager.current_context().dialog_data["notification_value"]) + int(amount))
+            print(manager.current_context().dialog_data["notification_value"])
     else:
         if int(manager.current_context().dialog_data["notification_value"]) - int(amount) > lower_limit:
-            manager.current_context().dialog_data["notification_value"] =\
+            manager.current_context().dialog_data["notification_value"] = \
                 str(int(manager.current_context().dialog_data["notification_value"]) - int(amount))
+
 
 async def change_widget_notification_type(c: CallbackQuery, button: Button, manager: DialogManager):
     if manager.current_context().dialog_data["notification_type"] == "m":
         manager.current_context().dialog_data["notification_type"] = "h"
     elif manager.current_context().dialog_data["notification_type"] == "h":
+        manager.current_context().dialog_data["notification_type"] = "d"
+    elif manager.current_context().dialog_data["notification_type"] == "d":
         manager.current_context().dialog_data["notification_type"] = "m"
     manager.current_context().dialog_data["notification_value"] = str(5)
     await manager.switch_to(CreateTask.select_notification_time)
-
 
 
 create_task_dialog = Dialog(
@@ -403,65 +415,96 @@ create_task_dialog = Dialog(
                func(lambda notification: notification == [])),
 
         Group(
-            Button(Const("       "), id="time_widget_space"),
+            Button(Const("   ⌈   "), id="time_widget_space"),
             Button(Const("   +15m "), id="widget_not_minutes_plus_15", on_click=widget_notification_hours),
             Button(Const("   +5m "), id="widget_not_minutes_plus_5", on_click=widget_notification_hours),
             Button(Const("    +m   "), id="widget_not_minutes_plus_1", on_click=widget_notification_hours),
-            Button(Const("       "), id="time_widget_space"),
+            Button(Const("   ⌉   "), id="time_widget_space"),
             when=F["dialog_data"]["notification_type"].func(lambda notification_type: notification_type == "m"),
             width=5,
         ),
         Group(
 
-            Button(Format("min"), id="select_notification_time_change", on_click=change_widget_notification_type),
+            Button(Format("mins"), id="select_notification_time_change", on_click=change_widget_notification_type),
             Button(Format("{dialog_data[notification_value]}"), id="time_widget"),
-            Button(Format(" ❌ "), id="time_widget"),
+            Button(Format("        "), id="time_widget"),
             when=F["dialog_data"]["notification_type"].func(lambda notification_type: notification_type == "m"),
             width=3
         ),
         Group(
 
-            Button(Const(" "), id="time_widget_space"),
+            Button(Const("⌊"), id="time_widget_space"),
 
             Button(Const("-15m"), id="widget_not_minutes_minus_15", on_click=widget_notification_hours),
             Button(Const("-5m"), id="widget_not_minutes_minus_5", on_click=widget_notification_hours),
 
             Button(Const("-m"), id="widget_not_minutes_minus_1", on_click=widget_notification_hours),
-            Button(Const("   "), id="time_widget_space"),
+            Button(Const(" ⌋ "), id="time_widget_space"),
             when=F["dialog_data"]["notification_type"].func(lambda notification_type: notification_type == "m"),
             width=5
         ),
 
-
         Group(
-            Button(Const("       "), id="time_widget_space"),
+            Button(Const("   ⌈   "), id="time_widget_space"),
             Button(Const("   +5h   "), id="widget_not_hours_plus_5", on_click=widget_notification_hours),
             Button(Const("   +3h   "), id="widget_not_hours_plus_3", on_click=widget_notification_hours),
             Button(Const("    +h     "), id="widget_not_hours_plus_1", on_click=widget_notification_hours),
-            Button(Const("         "), id="time_widget_space"),
+            Button(Const("   ⌉     "), id="time_widget_space"),
             when=F["dialog_data"]["notification_type"].func(lambda notification_type: notification_type == "h"),
             width=5,
         ),
         Group(
 
-            Button(Format(" hour"), id="select_notification_time_change", on_click=change_widget_notification_type),
+            Button(Format("hours"), id="select_notification_time_change", on_click=change_widget_notification_type),
             Button(Format("{dialog_data[notification_value]}"), id="time_widget"),
-            Button(Format(" ❌ "), id="time_widget"),
+            Button(Format("        "), id="time_widget"),
             when=F["dialog_data"]["notification_type"].func(lambda notification_type: notification_type == "h"),
             width=3
         ),
         Group(
 
-            Button(Const(" "), id="time_widget_space"),
+            Button(Const("⌊"), id="time_widget_space"),
 
             Button(Const("-5h"), id="widget_not_hours_minus_5", on_click=widget_notification_hours),
             Button(Const("-3h"), id="widget_not_hours_minus_3", on_click=widget_notification_hours),
 
             Button(Const("-h"), id="widget_not_hours_minus_1", on_click=widget_notification_hours),
-            Button(Const("   "), id="time_widget_space"),
+            Button(Const(" ⌋ "), id="time_widget_space"),
             when=F["dialog_data"]["notification_type"].func(lambda notification_type: notification_type == "h"),
             width=5
         ),
+
+        Group(
+            Button(Const("   ⌈   "), id="time_widget_space"),
+            Button(Const("   +3d   "), id="widget_not_days_plus_3", on_click=widget_notification_hours),
+            Button(Const("   +2d   "), id="widget_not_days_plus_2", on_click=widget_notification_hours),
+            Button(Const("    +d     "), id="widget_not_days_plus_1", on_click=widget_notification_hours),
+            Button(Const("   ⌉     "), id="time_widget_space"),
+            when=F["dialog_data"]["notification_type"].func(lambda notification_type: notification_type == "d"),
+            width=5,
+        ),
+        Group(
+
+            Button(Format(" days"), id="select_notification_time_change", on_click=change_widget_notification_type),
+            Button(Format("{dialog_data[notification_value]}"), id="time_widget"),
+            Button(Format("     "), id="time_widget"),
+            when=F["dialog_data"]["notification_type"].func(lambda notification_type: notification_type == "d"),
+            width=3
+        ),
+        Group(
+
+            Button(Const("⌊"), id="time_widget_space"),
+
+            Button(Const("-3d"), id="widget_not_days_minus_3", on_click=widget_notification_hours),
+            Button(Const("-2d"), id="widget_not_days_minus_2", on_click=widget_notification_hours),
+
+            Button(Const("-d"), id="widget_not_days_minus_1", on_click=widget_notification_hours),
+            Button(Const(" ⌋ "), id="time_widget_space"),
+            when=F["dialog_data"]["notification_type"].func(lambda notification_type: notification_type == "d"),
+            width=5
+        ),
+
+
         Group(
             Button(Const("Добавить"), id="select_notification_time_save"),
             SwitchTo(Const("Назад"), id="select_notification_time_back", state=CreateTask.start_create_task),

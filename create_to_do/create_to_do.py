@@ -45,6 +45,7 @@ class CreateTask(StatesGroup):
     set_to_do_time = State()
     save_to_do = State()
     time_widget = State()
+    select_notification_time = State()
 
 
 tags = [
@@ -165,6 +166,46 @@ async def widget_minutes(c: CallbackQuery, button: Button, manager: DialogManage
             manager.current_context().dialog_data["minutes_value"] = str(int(manager.current_context().dialog_data["minutes_value"]) - int(amount))
 
 
+async def getter_notification(dialog_manager: DialogManager, **kwargs):
+    if "notification" not in dialog_manager.current_context().dialog_data:
+        dialog_manager.current_context().dialog_data["notification"] = {"m": [], "h": [], "d": []}
+    if "notification_type" not in dialog_manager.current_context().dialog_data:
+        dialog_manager.current_context().dialog_data["notification_type"] = "m"
+    if "notification_value" not in dialog_manager.current_context().dialog_data:
+        dialog_manager.current_context().dialog_data["notification_value"] = str(5)
+    return {}
+
+
+async def get_widget_notification_data(notification_type: str):
+    split_str, upper_limit, lower_limit = "", "", ""
+    if notification_type == "h":
+        split_str = "widget_not_hours_"
+        upper_limit = 23
+        lower_limit = 0
+    elif notification_type == "m":
+        split_str = "widget_not_minutes_"
+        upper_limit = 59
+        lower_limit = 0
+    return split_str, upper_limit, lower_limit
+
+
+async def widget_notification_hours(c: CallbackQuery, button: Button, manager: DialogManager):
+    split_str, upper_limit, lower_limit = await \
+        get_widget_notification_data(manager.current_context().dialog_data["notification_type"])
+    action, amount = button.widget_id.split(split_str)[1].split("_")
+    if action == "plus":
+        if int(manager.current_context().dialog_data["notification_value"]) + int(amount) <= upper_limit:
+            manager.current_context().dialog_data["notification_value"] =\
+                str(int(manager.current_context().dialog_data["notification_value"]) + int(amount))
+    else:
+        if int(manager.current_context().dialog_data["notification_value"]) - int(amount) > lower_limit:
+            manager.current_context().dialog_data["notification_value"] =\
+                str(int(manager.current_context().dialog_data["notification_value"]) - int(amount))
+
+
+
+
+
 create_task_dialog = Dialog(
     Window(
         Const("Выберете поля, которые вы хотите заполнить"),
@@ -175,6 +216,9 @@ create_task_dialog = Dialog(
                      state=CreateTask.set_to_do_date),
             SwitchTo(Const("Тэги"), id="start_create_task_set_tags", state=CreateTask.set_tags),
             SwitchTo(Const("Сохранить"), id="start_create_task_save", state=CreateTask.save_to_do),
+            SwitchTo(Const("Напомнить"), id="start_create_select_notification_time", state=CreateTask.
+                     select_notification_time),
+
             # SwitchTo(Const("Виджет"), id="start_create_task_time_widget", state=CreateTask.time_widget),
             width=2
         ),
@@ -345,5 +389,79 @@ create_task_dialog = Dialog(
         ),
         getter=getter_widget_time,
         state=CreateTask.set_to_do_time,
+    ),
+    Window(
+        Format("Вы ввели {dialog_data[notification]}.\nЕсли хотите изменить описание то введите новое:",
+               F["dialog_data"]["notification"].func(lambda notification: notification != [])),
+        Format("Выберете за сколько напомнить о toDo", F["dialog_data"]["notification"].
+               func(lambda notification: notification == [])),
+
+        Group(
+            Button(Const("       "), id="time_widget_space"),
+            Button(Const("   +15m "), id="widget_not_minutes_plus_15", on_click=widget_notification_hours),
+            Button(Const("   +5m "), id="widget_not_minutes_plus_5", on_click=widget_notification_hours),
+            Button(Const("    +m   "), id="widget_not_minutes_plus_1", on_click=widget_notification_hours),
+            Button(Const("       "), id="time_widget_space"),
+            when=F["dialog_data"]["notification_type"].func(lambda notification_type: notification_type == "m"),
+            width=5,
+        ),
+        Group(
+
+            Button(Format("min"), id="time_widget"),
+            Button(Format("{dialog_data[notification_value]}"), id="time_widget"),
+            Button(Format(" ❌ "), id="time_widget"),
+            when=F["dialog_data"]["notification_type"].func(lambda notification_type: notification_type == "m"),
+            width=3
+        ),
+        Group(
+
+            Button(Const(" "), id="time_widget_space"),
+
+            Button(Const("-15m"), id="widget_not_minutes_minus_15", on_click=widget_notification_hours),
+            Button(Const("-5m"), id="widget_not_minutes_minus_5", on_click=widget_notification_hours),
+
+            Button(Const("-m"), id="widget_not_minutes_minus_1", on_click=widget_notification_hours),
+            Button(Const("   "), id="time_widget_space"),
+            when=F["dialog_data"]["notification_type"].func(lambda notification_type: notification_type == "m"),
+            width=5
+        ),
+
+
+        Group(
+            Button(Const("       "), id="time_widget_space"),
+            Button(Const("   +5h   "), id="widget_not_hours_plus_5", on_click=widget_notification_hours),
+            Button(Const("   +3h   "), id="widget_not_hours_plus_3", on_click=widget_notification_hours),
+            Button(Const("    +h     "), id="widget_not_hours_plus_1", on_click=widget_notification_hours),
+            Button(Const("         "), id="time_widget_space"),
+            when=F["dialog_data"]["notification_type"].func(lambda notification_type: notification_type == "h"),
+            width=5,
+        ),
+        Group(
+
+            Button(Format(" hour"), id="time_widget"),
+            Button(Format("{dialog_data[notification_value]}"), id="time_widget"),
+            Button(Format(" ❌ "), id="time_widget"),
+            when=F["dialog_data"]["notification_type"].func(lambda notification_type: notification_type == "h"),
+            width=3
+        ),
+        Group(
+
+            Button(Const(" "), id="time_widget_space"),
+
+            Button(Const("-5h"), id="widget_not_hours_minus_5", on_click=widget_notification_hours),
+            Button(Const("-3h"), id="widget_not_hours_minus_3", on_click=widget_notification_hours),
+
+            Button(Const("-h"), id="widget_not_hours_minus_1", on_click=widget_notification_hours),
+            Button(Const("   "), id="time_widget_space"),
+            when=F["dialog_data"]["notification_type"].func(lambda notification_type: notification_type == "h"),
+            width=5
+        ),
+        Group(
+            Button(Const("Добавить"), id="select_notification_time_save"),
+            SwitchTo(Const("Назад"), id="select_notification_time_back", state=CreateTask.start_create_task),
+            width=2
+        ),
+        getter=getter_notification,
+        state=CreateTask.select_notification_time,
     ),
 )

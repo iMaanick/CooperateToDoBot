@@ -202,7 +202,13 @@ async def widget_notification_hours(c: CallbackQuery, button: Button, manager: D
             manager.current_context().dialog_data["notification_value"] =\
                 str(int(manager.current_context().dialog_data["notification_value"]) - int(amount))
 
-
+async def change_widget_notification_type(c: CallbackQuery, button: Button, manager: DialogManager):
+    if manager.current_context().dialog_data["notification_type"] == "m":
+        manager.current_context().dialog_data["notification_type"] = "h"
+    elif manager.current_context().dialog_data["notification_type"] == "h":
+        manager.current_context().dialog_data["notification_type"] = "m"
+    manager.current_context().dialog_data["notification_value"] = str(5)
+    await manager.switch_to(CreateTask.select_notification_time)
 
 
 
@@ -407,7 +413,7 @@ create_task_dialog = Dialog(
         ),
         Group(
 
-            Button(Format("min"), id="time_widget"),
+            Button(Format("min"), id="select_notification_time_change", on_click=change_widget_notification_type),
             Button(Format("{dialog_data[notification_value]}"), id="time_widget"),
             Button(Format(" ❌ "), id="time_widget"),
             when=F["dialog_data"]["notification_type"].func(lambda notification_type: notification_type == "m"),
@@ -438,7 +444,7 @@ create_task_dialog = Dialog(
         ),
         Group(
 
-            Button(Format(" hour"), id="time_widget"),
+            Button(Format(" hour"), id="select_notification_time_change", on_click=change_widget_notification_type),
             Button(Format("{dialog_data[notification_value]}"), id="time_widget"),
             Button(Format(" ❌ "), id="time_widget"),
             when=F["dialog_data"]["notification_type"].func(lambda notification_type: notification_type == "h"),

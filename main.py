@@ -8,6 +8,7 @@ from aiogram_dialog import (
     DialogManager, setup_dialogs, StartMode, )
 from dotenv import load_dotenv
 from create_to_do.create_to_do import create_task_dialog, CreateTask
+from DbMiddleware import DbMiddleware
 
 
 async def start(message: Message, dialog_manager: DialogManager):
@@ -17,18 +18,18 @@ async def start(message: Message, dialog_manager: DialogManager):
 async def main():
     load_dotenv()
     print("Starting bot")
-    connection = await asyncpg.connect(
+    pool_connect = await asyncpg.create_pool(
         host=os.environ.get("HOST"),
         user=os.environ.get("USER"),
         password=os.environ.get("PASSWORD"),
-        database=os.environ.get("DATABASE")
-    )
+        database=os.environ.get("DATABASE"))
     # res = await connection.fetch("""SELECT * FROM users;""")
     # for result in res:
     #     print("user_id: ", result["user_id"], "name: ", result["name"])
     storage = MemoryStorage()
     bot = Bot(token=os.environ.get("BOT_TOKEN"))
     dp = Dispatcher(storage=storage)
+    dp.update.middleware.register(DbMiddleware(pool_connect))
     dp.message.register(start, F.text == "/start")
     dialog_router = Router()
     dialog_router.include_routers(

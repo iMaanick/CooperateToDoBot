@@ -131,6 +131,11 @@ async def button_time_getter(**kwargs):
 
 
 async def getter_widget_time(dialog_manager: DialogManager, **kwargs):
+    # print(dialog_manager.middleware_data["pool"])
+    # data = await dialog_manager.middleware_data["pool"].fetch("""SELECT * FROM users;""")
+    # await dialog_manager.middleware_data["pool"].execute(f"INSERT INTO users (user_id, name) VALUES ({11111}, {'222222'})")
+    # for result in data:
+    #     print("user_id: ", result["user_id"], "name: ", result["name"])
     if "hour_value" not in dialog_manager.current_context().dialog_data:
         dialog_manager.current_context().dialog_data["hour_value"] = str(12)
     if "minutes_value" not in dialog_manager.current_context().dialog_data:

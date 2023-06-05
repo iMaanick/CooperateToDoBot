@@ -46,6 +46,7 @@ class CreateTask(StatesGroup):
     save_to_do = State()
     time_widget = State()
     select_notification_time = State()
+    edit_notification_time = State()
 
 
 tags = [
@@ -184,7 +185,7 @@ async def getter_notification(dialog_manager: DialogManager, **kwargs):
 
 async def getter_notification_text(dialog_manager: DialogManager):
     notification = dialog_manager.current_context().dialog_data["notification"]
-    dialog_manager.current_context().dialog_data["notification"] =\
+    dialog_manager.current_context().dialog_data["notification"] = \
         {"m": list(set(notification["m"])), "h": list(set(notification["h"])), "d": list(set(notification["d"]))}
     notification = dialog_manager.current_context().dialog_data["notification"]
     output_str = "minutes:\n"
@@ -247,6 +248,35 @@ async def add_notification(c: CallbackQuery, button: Button, manager: DialogMana
     manager.current_context().dialog_data["notification"][manager.current_context().dialog_data["notification_type"]]. \
         append(manager.current_context().dialog_data["notification_value"])
     await manager.switch_to(CreateTask.select_notification_time)
+
+
+async def getter_notification_edit(dialog_manager: DialogManager, **kwargs):
+    output_str = await getter_notification_text(dialog_manager)
+    notification = dialog_manager.current_context().dialog_data["notification"]
+    buttons_m = []
+    buttons_h = []
+    buttons_d = []
+    for time in notification["m"]:
+        buttons_m.append(("min " + time, "m " + time))
+    for time in notification["h"]:
+        buttons_h.append(("hour " + time, "h " + time))
+    for time in notification["d"]:
+        buttons_d.append(("day " + time, "d " + time))
+    all_buttons = [*buttons_m, *buttons_h, *buttons_d]
+    print(all_buttons)
+    return {
+        "notification_edit": output_str,
+        "buttons_m": buttons_m,
+        "buttons_h": buttons_h,
+        "buttons_d": buttons_d,
+        "all_buttons": all_buttons
+    }
+
+
+async def delete_notification(callback: CallbackQuery, widget: Any, manager: DialogManager,
+                              selected_button: str):
+    type_notification, id_notification = selected_button.split(" ")  # need same id for notification :p
+    manager.current_context().dialog_data["notification"][type_notification].remove(id_notification)
 
 
 create_task_dialog = Dialog(
@@ -452,7 +482,8 @@ create_task_dialog = Dialog(
 
             Button(Format("mins"), id="select_notification_time_change", on_click=change_widget_notification_type),
             Button(Format("{dialog_data[notification_value]}"), id="time_widget"),
-            Button(Format("   ✏️    "), id="time_widget"),
+            SwitchTo(Format("  ✏️  "), id="select_notification_time_to_edit_notification_time",
+                     state=CreateTask.edit_notification_time),
             when=F["dialog_data"]["notification_type"].func(lambda notification_type: notification_type == "m"),
             width=3
         ),
@@ -482,7 +513,8 @@ create_task_dialog = Dialog(
 
             Button(Format("hours"), id="select_notification_time_change", on_click=change_widget_notification_type),
             Button(Format("{dialog_data[notification_value]}"), id="time_widget"),
-            Button(Format("    ✏️   "), id="time_widget"),
+            SwitchTo(Format("  ✏️  "), id="select_notification_time_to_edit_notification_time",
+                     state=CreateTask.edit_notification_time),
             when=F["dialog_data"]["notification_type"].func(lambda notification_type: notification_type == "h"),
             width=3
         ),
@@ -512,7 +544,8 @@ create_task_dialog = Dialog(
 
             Button(Format(" days"), id="select_notification_time_change", on_click=change_widget_notification_type),
             Button(Format("{dialog_data[notification_value]}"), id="time_widget"),
-            Button(Format("  ✏️  "), id="time_widget"),
+            SwitchTo(Format("  ✏️  "), id="select_notification_time_to_edit_notification_time",
+                     state=CreateTask.edit_notification_time),
             when=F["dialog_data"]["notification_type"].func(lambda notification_type: notification_type == "d"),
             width=3
         ),
@@ -536,5 +569,26 @@ create_task_dialog = Dialog(
         ),
         getter=getter_notification,
         state=CreateTask.select_notification_time,
+    ),
+    Window(
+        Format("Вы ввели:\n{notification_edit}"),
+        Group(
+            SwitchTo(Const("Назад"), id="edit_notification_time_back", state=CreateTask.select_notification_time),
+            width=2
+        ),
+        Group(
+            Select(
+                # Format("✓ {item[0]}"),
+                Format("{item[0]}"),
+                id="select_not_edit",
+                items="all_buttons",
+                item_id_getter=operator.itemgetter(1),
+                on_click=delete_notification,
+            ),
+            width=2,
+            id="group_edit",
+        ),
+        getter=getter_notification_edit,
+        state=CreateTask.edit_notification_time,
     ),
 )

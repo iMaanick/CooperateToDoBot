@@ -184,6 +184,9 @@ async def getter_notification(dialog_manager: DialogManager, **kwargs):
 
 async def getter_notification_text(dialog_manager: DialogManager):
     notification = dialog_manager.current_context().dialog_data["notification"]
+    dialog_manager.current_context().dialog_data["notification"] =\
+        {"m": list(set(notification["m"])), "h": list(set(notification["h"])), "d": list(set(notification["d"]))}
+    notification = dialog_manager.current_context().dialog_data["notification"]
     output_str = "minutes:\n"
     for time in notification["m"]:
         output_str += f"•{time}\n"

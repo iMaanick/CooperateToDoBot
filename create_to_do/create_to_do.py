@@ -190,13 +190,13 @@ async def getter_notification_text(dialog_manager: DialogManager):
     notification = dialog_manager.current_context().dialog_data["notification"]
     output_str = "minutes:\n"
     for time in notification["m"]:
-        output_str += f"•{time}\n"
+        output_str += f"   •{time}\n"
     output_str += "hours:\n"
     for time in notification["h"]:
-        output_str += f"•{time}\n"
+        output_str += f"   •{time}\n"
     output_str += "days:\n"
     for time in notification["d"]:
-        output_str += f"•{time}\n"
+        output_str += f"   •{time}\n"
     return output_str
 
 
@@ -278,6 +278,14 @@ async def delete_notification(callback: CallbackQuery, widget: Any, manager: Dia
     type_notification, id_notification = selected_button.split(" ")  # need same id for notification :p
     manager.current_context().dialog_data["notification"][type_notification].remove(id_notification)
 
+
+async def getter_save_str(dialog_manager: DialogManager, **kwargs):
+    output_str = ""
+    if "notification" in dialog_manager.current_context().dialog_data:
+        output_str = await getter_notification_text(dialog_manager)
+    return {
+        "notification": output_str
+    }
 
 create_task_dialog = Dialog(
     Window(
@@ -404,20 +412,24 @@ create_task_dialog = Dialog(
         state=CreateTask.time_widget
     ),
     Window(
-        Format("Название: {dialog_data[name]}", F["dialog_data"].func(lambda dialog_data: "name" in dialog_data)),
-        Format("Название: не введено", F["dialog_data"].func(lambda dialog_data: "name" not in dialog_data)),
-        Format("Описание: {dialog_data[description]}",
+        Format("Название: {dialog_data[name]}\n", F["dialog_data"].func(lambda dialog_data: "name" in dialog_data)),
+        Format("Название: не введено\n", F["dialog_data"].func(lambda dialog_data: "name" not in dialog_data)),
+        Format("Описание: {dialog_data[description]}\n",
                F["dialog_data"].func(lambda dialog_data: "description" in dialog_data)),
-        Format("Описание: не введено", F["dialog_data"].func(lambda dialog_data: "description" not in dialog_data)),
-        Format("Тэги: {dialog_data[tags]}", F["dialog_data"].func(lambda dialog_data: "tags" in dialog_data)),
-        Format("Тэги: не введены", F["dialog_data"].func(lambda dialog_data: "tags" not in dialog_data)),
-        Format("Дата: {dialog_data[date]} {dialog_data[time]}", F["dialog_data"].
+        Format("Описание: не введено\n", F["dialog_data"].func(lambda dialog_data: "description" not in dialog_data)),
+        Format("Тэги: {dialog_data[tags]}\n", F["dialog_data"].func(lambda dialog_data: "tags" in dialog_data)),
+        Format("Тэги: не введены\n", F["dialog_data"].func(lambda dialog_data: "tags" not in dialog_data)),
+        Format("Дата: {dialog_data[date]} {dialog_data[time]}\n", F["dialog_data"].
                func(lambda dialog_data: "time" in dialog_data)),
-        Format("Дата: не введена", F["dialog_data"].func(lambda dialog_data: "time" not in dialog_data)),
+        Format("Дата: не введена\n", F["dialog_data"].func(lambda dialog_data: "time" not in dialog_data)),
+        Format("Напоминание: \n{notification}\n", F["dialog_data"].
+               func(lambda dialog_data: "notification" in dialog_data)),
+        Format("Напоминание: нет напоминаний\n", F["dialog_data"].func(lambda dialog_data: "notification" not in dialog_data)),
         Group(
             SwitchTo(Const("Назад"), id="set_to_do_time_back", state=CreateTask.start_create_task),
             width=2
         ),
+        getter=getter_save_str,
         state=CreateTask.save_to_do,
     ),
     Window(
@@ -571,9 +583,10 @@ create_task_dialog = Dialog(
         state=CreateTask.select_notification_time,
     ),
     Window(
-        Format("Вы ввели:\n{notification_edit}"),
+        Format("Вы ввели:ㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤ"
+               "\n{notification_edit}"),
         Group(
-            SwitchTo(Const("Назад"), id="edit_notification_time_back", state=CreateTask.select_notification_time),
+            SwitchTo(Const("ㅤㅤㅤㅤㅤㅤНазадㅤㅤㅤㅤㅤㅤ"), id="edit_notification_time_back", state=CreateTask.select_notification_time),
             width=2
         ),
         Group(
